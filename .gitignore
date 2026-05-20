@@ -1,6 +1,0 @@
-.env
-/vendor/
-/public/assets/uploads/*
-/storage/logs/*
-/storage/cache/*
-/storage/sessions/*
