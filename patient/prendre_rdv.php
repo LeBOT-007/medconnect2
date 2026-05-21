@@ -18,9 +18,10 @@ $id_patient = $patient['id_patient'];
 
 // Récupérer la liste des médecins
 $stmt = $pdo->prepare("
-    SELECT m.id_medecin, u.nom, u.prenom, m.specialite
+    SELECT m.id_medecin, u.nom, u.prenom, s.nom_specialite AS specialite
     FROM medecin m
     JOIN utilisateurs u ON m.id_utilisateur = u.id_utilisateur
+    JOIN specialite s ON m.id_specialite = s.id_specialite
     ORDER BY u.nom
 ");
 $stmt->execute();
