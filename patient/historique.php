@@ -163,7 +163,7 @@ $rdvs = $stmt->fetchAll();
 <div class="container">
     <h1> Mes rendez-vous <span><?= count($rdvs) ?> au total</span></h1>
 
-    <a href="prendre_rdv.php" class="btn-rdv">+ Prendre un nouveau rendez-vous</a>
+    <a href="prendre_rdv.php" class="btn-rdv"> Prendre un nouveau rendez-vous</a>
 
     <?php if (empty($rdvs)): ?>
         <div class="vide">
