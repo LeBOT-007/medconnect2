@@ -1,9 +1,10 @@
 <?php
 // ============================================================
-// 1. LE BACKEND : Traitement de l'inscription (SÉCURISÉ)
+// 1. LE BACKEND : Inscription sécurisée + Envoi du code SMTP
 // ============================================================
 session_start();
 require_once 'config/database.php';
+require_once 'config/mail.php'; // Inclusion de notre nouveau module mail
 
 $erreur = "";
 
@@ -14,25 +15,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email  = trim($_POST['email']);
     $mdp    = $_POST['mot_de_passe'];
     
-    // SÉCURITÉ : Le rôle est forcé à 'patient'. Plus de choix possible depuis le formulaire.
+    // Sécurité stricte : rôle verrouillé sur patient
     $role   = 'patient'; 
 
-    // 1. Vérifier si l'email existe déjà dans la table utilisateurs
+    // 1. Vérifier si l'adresse email existe déjà
     $stmt = $pdo->prepare("SELECT id_utilisateur FROM utilisateurs WHERE email = ?");
     $stmt->execute([$email]);
     
     if ($stmt->fetch()) {
-        $erreur = "Cet email est déjà utilisé par un autre compte.";
+        $erreur = "Cette adresse email est déjà associée à un compte.";
     } else {
         // 2. Hachage sécurisé du mot de passe
         $hash = password_hash($mdp, PASSWORD_BCRYPT);
         
-        // 3. Insertion dans la table parente utilisateurs
-        $stmt = $pdo->prepare("INSERT INTO utilisateurs (nom, prenom, email, mot_de_passe, role) VALUES (?, ?, ?, ?, 'patient')");
-        $stmt->execute([$nom, $prenom, $email, $hash]);
+        // 3. Génération d'une suite de chiffres aléatoires (code à 6 chiffres)
+        $code_verification = rand(100000, 999999);
+
+        // 4. Insertion dans la table utilisateurs (statut non validé par défaut)
+        $stmt = $pdo->prepare("INSERT INTO utilisateurs (nom, prenom, email, mot_de_passe, role, code_verification, est_valide) VALUES (?, ?, ?, ?, 'patient', ?, 0)");
+        $stmt->execute([$nom, $prenom, $email, $hash, $code_verification]);
         $id = $pdo->lastInsertId();
 
-        // 4. Insertion obligatoire dans la table patients
+        // 5. Insertion des coordonnées obligatoires dans la table patients
         $telephone = trim($_POST['telephone']);
         $date_naissance = $_POST['date_naissance'];
         $adresse = trim($_POST['adresse']);
@@ -40,14 +44,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt2 = $pdo->prepare("INSERT INTO patients (id_utilisateur, telephone, date_naissance, adresse) VALUES (?, ?, ?, ?)");
         $stmt2->execute([$id, $telephone, $date_naissance, $adresse]);
 
-        // 5. Initialisation de la session automatique après inscription
-        $_SESSION['user_id']     = $id;
-        $_SESSION['user_nom']    = $nom;
-        $_SESSION['user_prenom'] = $prenom;
-        $_SESSION['user_role']   = $role;
+        // 6. Expédition réelle de l'email via PHPMailer
+        envoyerEmailVerification($email, $prenom, $code_verification);
 
-        // Redirection directe vers l'espace patient
-        header("Location: patient/dashboard.php");
+        // 7. On mémorise temporairement l'ID de l'utilisateur pour la page de vérification
+        $_SESSION['en_cours_validation'] = $id;
+
+        // Redirection instantanée vers l'interface de saisie du code
+        header("Location: verifier_code.php");
         exit;
     }
 }
@@ -70,12 +74,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 <div class="text-center mb-4">
                     <h1 class="text-primary fw-bold mb-1"><i class="bi bi-heart-pulse-fill me-2"></i>MedConnect</h1>
-                    <p class="text-muted">Rejoignez la plateforme médicale</p>
+                    <p class="text-muted">Créez votre compte en quelques instants</p>
                 </div>
 
                 <div class="card border-0 shadow-sm p-4">
                     <div class="card-body">
-                        <h4 class="card-title fw-bold text-dark mb-4 text-center">Créer un compte Patient</h4>
+                        <h4 class="card-title fw-bold text-dark mb-4 text-center">Formulaire d'inscription</h4>
 
                         <?php if (!empty($erreur)): ?>
                             <div class="alert alert-danger d-flex align-items-center" role="alert">
@@ -86,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         <form action="register.php" method="POST">
                             
-                            <h5 class="text-secondary fw-bold mb-3 border-bottom pb-2"><i class="bi bi-person-fill me-2"></i>Informations Générales</h5>
+                            <h5 class="text-secondary fw-bold mb-3 border-bottom pb-2"><i class="bi bi-person-fill me-2"></i>Identité</h5>
                             
                             <div class="row g-3 mb-3">
                                 <div class="col-md-6">
@@ -109,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <input type="password" name="mot_de_passe" id="mot_de_passe" class="form-control" placeholder="••••••••" required>
                             </div>
 
-                            <h5 class="text-secondary fw-bold mt-4 mb-3 border-bottom pb-2"><i class="bi bi-file-medical-fill me-2"></i>Coordonnées</h5>
+                            <h5 class="text-secondary fw-bold mt-4 mb-3 border-bottom pb-2"><i class="bi bi-file-medical-fill me-2"></i>Dossier et Contacts</h5>
                             
                             <div class="row g-3 mb-3">
                                 <div class="col-md-6">
@@ -123,18 +127,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
 
                             <div class="mb-4">
-                                <label for="adresse" class="form-label fw-semibold">Adresse de résidence</label>
+                                <label for="adresse" class="form-label fw-semibold">Adresse complète de résidence</label>
                                 <textarea name="adresse" id="adresse" class="form-control" rows="2" placeholder="Quartier, Ville..." required><?php echo isset($_POST['adresse']) ? htmlspecialchars($_POST['adresse']) : ''; ?></textarea>
                             </div>
 
                             <button type="submit" class="btn btn-success w-100 py-2 fw-bold shadow-sm mt-3">
-                                <i class="bi bi-person-plus-fill me-2"></i>Finaliser l'inscription
+                                <i class="bi bi-envelope-plus-fill me-2"></i>Créer mon compte
                             </button>
                         </form>
 
                         <div class="text-center mt-4">
-                            <p class="text-muted mb-0">Vous possédez déjà un compte ?</p>
-                            <a href="login.php" class="text-primary fw-semibold text-decoration-none">Se connecter ici</a>
+                            <p class="text-muted mb-0">Déjà inscrit ?</p>
+                            <a href="login.php" class="text-primary fw-semibold text-decoration-none">Se connecter</a>
                         </div>
                     </div>
                 </div>
