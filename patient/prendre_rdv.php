@@ -205,29 +205,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <nav>
     <div class="logo">Med<span>Connect</span></div>
     <div class="nav-links">
-        <a href="historique.php">📋 Historique</a>
+        <a href="historique.php">Historique</a>
         <a href="../logout.php">Déconnexion</a>
     </div>
 </nav>
 
 <div class="container">
-    <h1>🗓️ Prendre un rendez-vous</h1>
+    <h1> Prendre un rendez-vous</h1>
 
     <div class="card">
 
         <!-- Messages de retour -->
         <?php if ($message): ?>
-            <div class="alert alert-success">✅ <?= htmlspecialchars($message) ?></div>
+            <div class="alert alert-success"> <?= htmlspecialchars($message) ?></div>
         <?php endif; ?>
         <?php if ($erreur): ?>
-            <div class="alert alert-error">❌ <?= htmlspecialchars($erreur) ?></div>
+            <div class="alert alert-error"><?= htmlspecialchars($erreur) ?></div>
         <?php endif; ?>
 
         <form method="POST" action="">
 
             <!-- Choix du médecin -->
             <div class="group">
-                <label for="id_medecin">👨‍⚕️ Médecin *</label>
+                <label for="id_medecin">Médecin *</label>
                 <select name="id_medecin" id="id_medecin" required>
                     <option value="">-- Choisir un médecin --</option>
                     <?php foreach ($medecins as $med): ?>
@@ -243,12 +243,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <!-- Date et heure -->
             <div class="row">
                 <div class="group">
-                    <label for="date_rdv">📅 Date *</label>
+                    <label for="date_rdv"> Date *</label>
                     <input type="date" name="date_rdv" id="date_rdv" required
                            value="<?= htmlspecialchars($_POST['date_rdv'] ?? '') ?>">
                 </div>
                 <div class="group">
-                    <label for="heure_rdv">⏰ Heure *</label>
+                    <label for="heure_rdv"> Heure *</label>
                     <input type="time" name="heure_rdv" id="heure_rdv" required
                            min="08:00" max="18:00"
                            value="<?= htmlspecialchars($_POST['heure_rdv'] ?? '') ?>">
@@ -257,7 +257,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <!-- Motif -->
             <div class="group">
-                <label for="motif">📝 Motif de la consultation</label>
+                <label for="motif"> Motif de la consultation</label>
                 <textarea name="motif" id="motif" placeholder="Ex: Douleur abdominale, contrôle annuel..."><?= htmlspecialchars($_POST['motif'] ?? '') ?></textarea>
             </div>
 
