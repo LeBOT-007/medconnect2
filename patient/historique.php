@@ -17,12 +17,14 @@ $patient = $stmt->fetch();
 $id_patient = $patient['id_patient'];
 
 // Récupérer tous les rendez-vous du patient
+// ✅ APRÈS
 $stmt = $pdo->prepare("
     SELECT rv.date_rdv, rv.heure_rdv, rv.motif, rv.statut,
-           u.nom, u.prenom, m.specialite
+           u.nom, u.prenom, s.nom_specialite
     FROM rendez_vous rv
     JOIN medecin m ON rv.id_medecin = m.id_medecin
     JOIN utilisateurs u ON m.id_utilisateur = u.id_utilisateur
+    JOIN specialite s ON m.id_specialite = s.id_specialite
     WHERE rv.id_patient = ?
     ORDER BY rv.date_rdv DESC
 ");
