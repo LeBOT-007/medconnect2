@@ -161,13 +161,13 @@ $rdvs = $stmt->fetchAll();
 </nav>
 
 <div class="container">
-    <h1>📋 Mes rendez-vous <span><?= count($rdvs) ?> au total</span></h1>
+    <h1> Mes rendez-vous <span><?= count($rdvs) ?> au total</span></h1>
 
     <a href="prendre_rdv.php" class="btn-rdv">+ Prendre un nouveau rendez-vous</a>
 
     <?php if (empty($rdvs)): ?>
         <div class="vide">
-            <div class="icon">📅</div>
+            <div class="icon"></div>
             <p>Vous n'avez encore aucun rendez-vous.</p>
         </div>
     <?php else: ?>
@@ -175,8 +175,8 @@ $rdvs = $stmt->fetchAll();
         <div class="rdv-card <?= htmlspecialchars($rdv['statut']) ?>">
             <div class="rdv-info">
                 <div class="date">
-                    📅 <?= date('d/m/Y', strtotime($rdv['date_rdv'])) ?>
-                    &nbsp;⏰ <?= substr($rdv['heure_rdv'], 0, 5) ?>
+                     <?= date('d/m/Y', strtotime($rdv['date_rdv'])) ?>
+                    &nbsp; <?= substr($rdv['heure_rdv'], 0, 5) ?>
                 </div>
                 <div class="medecin">
                     Dr <?= htmlspecialchars($rdv['prenom'] . ' ' . $rdv['nom']) ?>
@@ -188,10 +188,10 @@ $rdvs = $stmt->fetchAll();
             </div>
             <?php
                 $labels = [
-                    'valide'     => '✅ Validé',
-                    'en_attente' => '⏳ En attente',
-                    'annule'     => '❌ Annulé',
-                    'refuse'     => '🚫 Refusé',
+                    'valide'     => ' Validé',
+                    'en_attente' => 'En attente',
+                    'annule'     => ' Annulé',
+                    'refuse'     => 'Refusé',
                 ];
                 $s = $rdv['statut'];
             ?>
