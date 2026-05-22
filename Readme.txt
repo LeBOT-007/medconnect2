@@ -19,3 +19,6 @@ CREATE TABLE disponibilite (
     date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (id_medecin) REFERENCES medecin(id_medecin) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-------le lien de connection
+
+https://precut-fetch-grapple.ngrok-free.dev/medconnect2/
