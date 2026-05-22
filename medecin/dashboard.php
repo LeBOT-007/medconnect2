@@ -29,7 +29,8 @@ if (isset($_GET['action']) && isset($_GET['id_rdv'])) {
         $stmt->execute([$id_rdv, $id_medecin]);
         $_SESSION['message'] = "Le rendez-vous a été validé avec succès.";
     } elseif ($action === 'refuser') {
-        $stmt = $pdo->prepare("UPDATE rendez_vous SET statut = 'refuse' WHERE id_rdv = ? AND id_medecin = ?");
+        // CORRECTION : Utilisation de 'annule' au lieu de 'refuse' pour respecter les contraintes de l'ENUM
+        $stmt = $pdo->prepare("UPDATE rendez_vous SET statut = 'annule' WHERE id_rdv = ? AND id_medecin = ?");
         $stmt->execute([$id_rdv, $id_medecin]);
         $_SESSION['message'] = "Le rendez-vous a été refusé.";
     }
@@ -86,7 +87,7 @@ $rdv_valides = $stmt_valides->fetchAll();
 
         <div class="mb-4">
             <h2 class="fw-bold text-dark mb-1">Tableau de bord Médical</h2>
-            <p class="text-muted mb-0">Gérez vos consultations en attente et visualisez votre planning.</p>
+            <p class="text-muted mb-0">Gerez vos consultations en attente et visualisez votre planning.</p>
         </div>
 
         <div class="card border-0 shadow-sm mb-4">
