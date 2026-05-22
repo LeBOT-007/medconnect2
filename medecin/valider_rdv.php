@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$action, $id_rdv]);
     }
 
-    header("Location: dashbord.php");
+    header("Location: dashboard.php");
     exit;
 }
 ?>
