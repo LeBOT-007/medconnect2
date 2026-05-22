@@ -2,6 +2,7 @@
 session_start();
 require_once '../config/database.php';
 
+// Sécurité : Vérification de l'accès du patient
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
     header("Location: ../login.php");
     exit;
@@ -17,7 +18,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'annuler' && isset($_GET['id_r
         UPDATE rendez_vous rv
         JOIN patients p ON rv.id_patient = p.id_patient
         SET rv.statut = 'annule'
-        WHERE rv.id_rendez_vous = ? AND p.id_utilisateur = ? AND rv.statut = 'en_attente'
+        WHERE rv.id_rdv = ? AND p.id_utilisateur = ? AND rv.statut = 'en_attente'
     ");
     $stmt->execute([$id_rdv, $_SESSION['user_id']]);
     
@@ -28,7 +29,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'annuler' && isset($_GET['id_r
 
 // Prochain rendez-vous
 $stmt = $pdo->prepare("
-    SELECT rv.id_rendez_vous, rv.date_rdv, rv.heure_rdv, rv.statut, rv.motif,
+    SELECT rv.id_rdv, rv.date_rdv, rv.heure_rdv, rv.statut, rv.motif,
            u.nom AS medecin_nom, u.prenom AS medecin_prenom,
            s.nom_specialite
     FROM rendez_vous rv
@@ -43,9 +44,9 @@ $stmt = $pdo->prepare("
 $stmt->execute([$_SESSION['user_id']]);
 $prochain_rdv = $stmt->fetch();
 
-// Historique complet
+// Historique complet résumé (3 derniers RDV)
 $stmt = $pdo->prepare("
-    SELECT rv.id_rendez_vous, rv.date_rdv, rv.heure_rdv, rv.statut, rv.motif,
+    SELECT rv.id_rdv, rv.date_rdv, rv.heure_rdv, rv.statut, rv.motif,
            u.nom AS medecin_nom, u.prenom AS medecin_prenom,
            s.nom_specialite
     FROM rendez_vous rv
@@ -55,6 +56,7 @@ $stmt = $pdo->prepare("
     JOIN specialite s ON m.id_specialite = s.id_specialite
     WHERE p.id_utilisateur = ?
     ORDER BY rv.date_rdv DESC, rv.heure_rdv DESC
+    LIMIT 3
 ");
 $stmt->execute([$_SESSION['user_id']]);
 $historique = $stmt->fetchAll();
@@ -71,23 +73,9 @@ $historique = $stmt->fetchAll();
 </head>
 <body class="bg-light">
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="dashboard.php"><i class="bi bi-heart-pulse-fill me-2"></i>MedConnect</a>
-            <div class="collapse navbar-collapse justify-content-end">
-                <ul class="navbar-nav align-items-center">
-                    <li class="nav-item">
-                        <span class="nav-link active me-3">Bonjour, <?php echo htmlspecialchars($_SESSION['user_prenom'] . ' ' . $_SESSION['user_nom']); ?></span>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link btn btn-outline-light btn-sm text-white px-3" href="../logout.php"><i class="bi bi-box-arrow-right me-1"></i>Déconnexion</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <?php include_once '../includes/navbar_patient.php'; ?>
 
-    <div class="container my-5">
+    <div class="container my-4">
         
         <?php if (isset($_SESSION['message'])): ?>
             <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
@@ -96,10 +84,10 @@ $historique = $stmt->fetchAll();
             </div>
         <?php endif; ?>
 
-        <div class="row align-items-center mb-5 g-4">
+        <div class="row align-items-center mb-4 g-4">
             <div class="col-md-8">
                 <h2 class="fw-bold text-dark mb-1">Mon Espace Santé</h2>
-                <p class="text-muted mb-0">Consultez vos rendez-vous médicaux et planifiez vos prochaines consultations en quelques clics.</p>
+                <p class="text-muted mb-0">Consultez vos rendez-vous médicaux et planifiez vos prochaines consultations.</p>
             </div>
             <div class="col-md-4 text-md-end">
                 <a href="prendre_rdv.php" class="btn btn-primary btn-lg shadow-sm fw-semibold">
@@ -108,8 +96,7 @@ $historique = $stmt->fetchAll();
             </div>
         </div>
 
-        <!-- Prochain RDV -->
-        <div class="card border-0 shadow-sm mb-5 overflow-hidden">
+        <div class="card border-0 shadow-sm mb-4 overflow-hidden">
             <div class="card-header bg-white py-3 border-bottom-0">
                 <h5 class="card-title fw-bold text-dark mb-0"><i class="bi bi-clock-fill me-2 text-primary"></i>Mon prochain rendez-vous</h5>
             </div>
@@ -118,7 +105,6 @@ $historique = $stmt->fetchAll();
                     <div class="text-center p-5 text-muted bg-white">
                         <i class="bi bi-calendar-x display-4 text-secondary mb-2"></i>
                         <p class="mb-0">Vous n'avez aucun rendez-vous à venir.</p>
-                        <small class="d-block mt-1 text-muted">Cliquez sur le bouton ci-dessus pour réserver une consultation.</small>
                     </div>
                 <?php else: ?>
                     <div class="p-4 bg-white border-top border-light">
@@ -126,7 +112,7 @@ $historique = $stmt->fetchAll();
                             <div class="col-md-4">
                                 <div class="d-flex align-items-center">
                                     <div class="p-3 bg-primary-subtle text-primary rounded-circle me-3">
-                                        <i class="bi bi-person-md display-6"></i>
+                                        <i class="bi bi-person-vcard display-6"></i>
                                     </div>
                                     <div>
                                         <h5 class="mb-1 fw-bold">Dr. <?php echo htmlspecialchars($prochain_rdv['medecin_nom'] . ' ' . $prochain_rdv['medecin_prenom']); ?></h5>
@@ -149,12 +135,12 @@ $historique = $stmt->fetchAll();
                             <div class="col-md-2 text-md-end">
                                 <?php if ($prochain_rdv['statut'] === 'en_attente'): ?>
                                     <span class="badge bg-warning text-dark d-block mb-2 py-2">En attente</span>
-                                    <a href="dashboard.php?action=annuler&id_rdv=<?php echo $prochain_rdv['id_rendez_vous']; ?>"
+                                    <a href="dashboard.php?action=annuler&id_rdv=<?php echo $prochain_rdv['id_rdv']; ?>"
                                        class="btn btn-sm btn-outline-danger w-100"
                                        onclick="return confirm('Annuler ce rendez-vous ?');">
                                         <i class="bi bi-x-circle me-1"></i>Annuler
                                     </a>
-                                <?php elseif ($prochain_rdv['statut'] === 'confirme'): ?>
+                                <?php elseif ($prochain_rdv['statut'] === 'confirme' || $prochain_rdv['statut'] === 'valide'): ?>
                                     <span class="badge bg-success d-block py-2"><i class="bi bi-check-circle-fill me-1"></i>Confirmé</span>
                                 <?php endif; ?>
                             </div>
@@ -164,10 +150,10 @@ $historique = $stmt->fetchAll();
             </div>
         </div>
 
-        <!-- Historique -->
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white py-3 border-bottom-0">
-                <h5 class="card-title fw-bold text-dark mb-0"><i class="bi bi-journal-medical me-2 text-primary"></i>Historique de mes demandes</h5>
+            <div class="card-header bg-white py-3 border-bottom-0 d-flex justify-content-between align-items-center">
+                <h5 class="card-title fw-bold text-dark mb-0"><i class="bi bi-journal-medical me-2 text-primary"></i>Demandes récentes</h5>
+                <a href="historique.php" class="btn btn-sm btn-link fw-semibold text-decoration-none">Voir tout l'historique →</a>
             </div>
             <div class="card-body p-0">
                 <?php if (count($historique) === 0): ?>
@@ -195,9 +181,9 @@ $historique = $stmt->fetchAll();
                                         <td><span class="badge bg-light text-dark border"><?php echo htmlspecialchars($rdv['nom_specialite']); ?></span></td>
                                         <td><?php echo date('d/m/Y', strtotime($rdv['date_rdv'])); ?></td>
                                         <td><?php echo date('H:i', strtotime($rdv['heure_rdv'])); ?></td>
-                                        <td><span class="text-muted"><?php echo htmlspecialchars($rdv['motif'] ?: '—'); ?></span></td>
+                                        <td><span class="text-muted text-truncate d-inline-block" style="max-width: 150px;"><?php echo htmlspecialchars($rdv['motif'] ?: '—'); ?></span></td>
                                         <td class="pe-4">
-                                            <?php if ($rdv['statut'] === 'confirme'): ?>
+                                            <?php if ($rdv['statut'] === 'confirme' || $rdv['statut'] === 'valide'): ?>
                                                 <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill">Confirmé</span>
                                             <?php elseif ($rdv['statut'] === 'en_attente'): ?>
                                                 <span class="badge bg-warning-subtle text-warning-emphasis px-3 py-2 rounded-pill">En attente</span>

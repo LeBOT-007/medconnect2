@@ -25,44 +25,41 @@ if (isset($_GET['action']) && isset($_GET['id_rdv'])) {
     $action = $_GET['action'];
     
     if ($action === 'valider') {
-        $stmt = $pdo->prepare("UPDATE rendez_vous SET statut = 'confirme' WHERE id_rendez_vous = ? AND id_medecin = ?");
+        $stmt = $pdo->prepare("UPDATE rendez_vous SET statut = 'confirme' WHERE id_rdv = ? AND id_medecin = ?");
         $stmt->execute([$id_rdv, $id_medecin]);
         $_SESSION['message'] = "Le rendez-vous a été validé avec succès.";
     } elseif ($action === 'refuser') {
-        $stmt = $pdo->prepare("UPDATE rendez_vous SET statut = 'annule' WHERE id_rendez_vous = ? AND id_medecin = ?");
+        $stmt = $pdo->prepare("UPDATE rendez_vous SET statut = 'refuse' WHERE id_rdv = ? AND id_medecin = ?");
         $stmt->execute([$id_rdv, $id_medecin]);
         $_SESSION['message'] = "Le rendez-vous a été refusé.";
     }
-    
     header("Location: dashboard.php");
     exit;
 }
 
-// RDV en attente
-$stmt = $pdo->prepare("
-    SELECT rv.id_rendez_vous, rv.date_rdv, rv.heure_rdv, rv.statut, rv.motif,
-           u.nom, u.prenom, p.telephone
+// Récupérer les demandes en attente
+$stmt_attente = $pdo->prepare("
+    SELECT rv.id_rdv, rv.date_rdv, rv.heure_rdv, rv.motif, u.nom, u.prenom 
     FROM rendez_vous rv
     JOIN patients p ON rv.id_patient = p.id_patient
     JOIN utilisateurs u ON p.id_utilisateur = u.id_utilisateur
     WHERE rv.id_medecin = ? AND rv.statut = 'en_attente'
     ORDER BY rv.date_rdv ASC, rv.heure_rdv ASC
 ");
-$stmt->execute([$id_medecin]);
-$rdv_en_attente = $stmt->fetchAll();
+$stmt_attente->execute([$id_medecin]);
+$rdv_attente = $stmt_attente->fetchAll();
 
-// RDV confirmés à venir
-$stmt = $pdo->prepare("
-    SELECT rv.id_rendez_vous, rv.date_rdv, rv.heure_rdv, rv.statut, rv.motif,
-           u.nom, u.prenom, p.telephone
+// Récupérer les rendez-vous confirmés
+$stmt_valides = $pdo->prepare("
+    SELECT rv.date_rdv, rv.heure_rdv, rv.motif, u.nom, u.prenom, p.telephone
     FROM rendez_vous rv
     JOIN patients p ON rv.id_patient = p.id_patient
     JOIN utilisateurs u ON p.id_utilisateur = u.id_utilisateur
-    WHERE rv.id_medecin = ? AND rv.statut = 'confirme' AND rv.date_rdv >= CURDATE()
+    WHERE rv.id_medecin = ? AND rv.statut = 'confirme'
     ORDER BY rv.date_rdv ASC, rv.heure_rdv ASC
 ");
-$stmt->execute([$id_medecin]);
-$rdv_valides = $stmt->fetchAll();
+$stmt_valides->execute([$id_medecin]);
+$rdv_valides = $stmt_valides->fetchAll();
 ?>
 
 <!DOCTYPE html>
@@ -70,29 +67,15 @@ $rdv_valides = $stmt->fetchAll();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MedConnect - Espace Médecin</title>
+    <title>MedConnect - Espace Praticien</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 </head>
 <body class="bg-light">
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="#"><i class="bi bi-heart-pulse-fill me-2"></i>MedConnect</a>
-            <div class="collapse navbar-collapse justify-content-end">
-                <ul class="navbar-nav align-items-center">
-                    <li class="nav-item">
-                        <span class="nav-link active me-3">Bienvenue, Dr. <?php echo htmlspecialchars($_SESSION['user_nom']); ?></span>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link btn btn-outline-light btn-sm text-white px-3" href="../logout.php"><i class="bi bi-box-arrow-right me-1"></i>Déconnexion</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <?php include_once '../includes/navbar_medecin.php'; ?>
 
-    <div class="container my-5">
+    <div class="container my-4">
         
         <?php if (isset($_SESSION['message'])): ?>
             <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
@@ -101,41 +84,20 @@ $rdv_valides = $stmt->fetchAll();
             </div>
         <?php endif; ?>
 
-        <div class="row g-4 mb-5">
-            <div class="col-md-6">
-                <div class="card border-0 shadow-sm bg-warning text-dark h-100">
-                    <div class="card-body d-flex align-items-center justify-content-between p-4">
-                        <div>
-                            <h6 class="text-uppercase fw-semibold mb-1 opacity-75">Demandes en attente</h6>
-                            <h2 class="display-5 fw-bold mb-0"><?php echo count($rdv_en_attente); ?></h2>
-                        </div>
-                        <i class="bi bi-clock-history display-4 opacity-50"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card border-0 shadow-sm bg-success text-white h-100">
-                    <div class="card-body d-flex align-items-center justify-content-between p-4">
-                        <div>
-                            <h6 class="text-uppercase fw-semibold mb-1 opacity-75">Consultations confirmées à venir</h6>
-                            <h2 class="display-5 fw-bold mb-0"><?php echo count($rdv_valides); ?></h2>
-                        </div>
-                        <i class="bi bi-calendar-check display-4 opacity-50"></i>
-                    </div>
-                </div>
-            </div>
+        <div class="mb-4">
+            <h2 class="fw-bold text-dark mb-1">Tableau de bord Médical</h2>
+            <p class="text-muted mb-0">Gérez vos consultations en attente et visualisez votre planning.</p>
         </div>
 
-        <!-- Demandes en attente -->
-        <div class="card border-0 shadow-sm mb-5">
+        <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-white py-3 border-bottom-0">
-                <h5 class="card-title text-warning fw-bold mb-0"><i class="bi bi-exclamation-circle-fill me-2"></i>Nouvelles demandes de rendez-vous</h5>
+                <h5 class="card-title fw-bold text-warning mb-0"><i class="bi bi-hourglass-split me-2"></i>Demandes de rendez-vous en attente</h5>
             </div>
             <div class="card-body p-0">
-                <?php if (count($rdv_en_attente) === 0): ?>
-                    <div class="text-center p-5 text-muted">
-                        <i class="bi bi-folder-symlink display-4"></i>
-                        <p class="mt-2 mb-0">Aucune demande en attente.</p>
+                <?php if (count($rdv_attente) === 0): ?>
+                    <div class="text-center p-5 text-muted bg-white">
+                        <i class="bi bi-calendar-check display-4 text-success mb-2"></i>
+                        <p class="mb-0">Aucune demande en attente. Vous êtes à jour !</p>
                     </div>
                 <?php else: ?>
                     <div class="table-responsive">
@@ -143,31 +105,25 @@ $rdv_valides = $stmt->fetchAll();
                             <thead class="table-light">
                                 <tr>
                                     <th class="ps-4">Patient</th>
-                                    <th>Téléphone</th>
                                     <th>Date</th>
                                     <th>Heure</th>
                                     <th>Motif</th>
-                                    <th class="text-center pe-4">Actions</th>
+                                    <th class="text-end pe-4">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($rdv_en_attente as $rdv): ?>
+                                <?php foreach ($rdv_attente as $rdv): ?>
                                     <tr>
                                         <td class="fw-bold ps-4"><?php echo htmlspecialchars($rdv['nom'] . ' ' . $rdv['prenom']); ?></td>
-                                        <td><?php echo htmlspecialchars($rdv['telephone']); ?></td>
                                         <td><?php echo date('d/m/Y', strtotime($rdv['date_rdv'])); ?></td>
                                         <td><?php echo date('H:i', strtotime($rdv['heure_rdv'])); ?></td>
-                                        <td><?php echo htmlspecialchars($rdv['motif'] ?: 'Non renseigné'); ?></td>
-                                        <td class="text-center pe-4">
-                                            <a href="dashboard.php?action=valider&id_rdv=<?php echo $rdv['id_rendez_vous']; ?>"
-                                               class="btn btn-sm btn-success me-2"
-                                               onclick="return confirm('Valider ce rendez-vous ?');">
-                                                <i class="bi bi-check-lg"></i> Accepter
+                                        <td><span class="text-muted"><?php echo htmlspecialchars($rdv['motif'] ?: 'Non renseigné'); ?></span></td>
+                                        <td class="text-end pe-4">
+                                            <a href="dashboard.php?action=valider&id_rdv=<?php echo $rdv['id_rdv']; ?>" class="btn btn-sm btn-success me-1 shadow-sm">
+                                                <i class="bi bi-check-lg me-1"></i>Accepter
                                             </a>
-                                            <a href="dashboard.php?action=refuser&id_rdv=<?php echo $rdv['id_rendez_vous']; ?>"
-                                               class="btn btn-sm btn-outline-danger"
-                                               onclick="return confirm('Refuser ce rendez-vous ?');">
-                                                <i class="bi bi-x-lg"></i> Refuser
+                                            <a href="dashboard.php?action=refuser&id_rdv=<?php echo $rdv['id_rdv']; ?>" class="btn btn-sm btn-outline-danger shadow-sm" onclick="return confirm('Refuser ce rendez-vous ?');">
+                                                <i class="bi bi-xl-lg me-1"></i>Refuser
                                             </a>
                                         </td>
                                     </tr>
@@ -179,16 +135,15 @@ $rdv_valides = $stmt->fetchAll();
             </div>
         </div>
 
-        <!-- Planning confirmé -->
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white py-3 border-bottom-0">
-                <h5 class="card-title text-success fw-bold mb-0"><i class="bi bi-calendar-event-fill me-2"></i>Mon planning des consultations confirmées</h5>
+                <h5 class="card-title fw-bold text-success mb-0"><i class="bi bi-calendar3-event me-2"></i>Mes Consultations Confirmées</h5>
             </div>
             <div class="card-body p-0">
                 <?php if (count($rdv_valides) === 0): ?>
                     <div class="text-center p-5 text-muted">
-                        <i class="bi bi-calendar-x display-4"></i>
-                        <p class="mt-2 mb-0">Aucun rendez-vous confirmé à venir.</p>
+                        <i class="bi bi-calendar-x display-4 text-secondary mb-2"></i>
+                        <p class="mb-0">Aucun rendez-vous confirmé programmé.</p>
                     </div>
                 <?php else: ?>
                     <div class="table-responsive">
@@ -207,11 +162,11 @@ $rdv_valides = $stmt->fetchAll();
                                 <?php foreach ($rdv_valides as $rdv): ?>
                                     <tr>
                                         <td class="fw-bold ps-4"><?php echo htmlspecialchars($rdv['nom'] . ' ' . $rdv['prenom']); ?></td>
-                                        <td><?php echo htmlspecialchars($rdv['telephone']); ?></td>
+                                        <td><?php echo htmlspecialchars($rdv['telephone'] ?: '—'); ?></td>
                                         <td><?php echo date('d/m/Y', strtotime($rdv['date_rdv'])); ?></td>
                                         <td><?php echo date('H:i', strtotime($rdv['heure_rdv'])); ?></td>
                                         <td><?php echo htmlspecialchars($rdv['motif'] ?: 'Non renseigné'); ?></td>
-                                        <td class="pe-4"><span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill">Confirmé</span></td>
+                                        <td class="pe-4"><span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill"><i class="bi bi-check-circle-fill me-1"></i> Confirmé</span></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>

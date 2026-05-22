@@ -30,35 +30,7 @@ $utilisateurs = $pdo->query("SELECT * FROM utilisateurs ORDER BY date_creation D
 </head>
 <body class="bg-light">
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
-        <div class="container">
-            <a class="navbar-brand fw-bold text-info" href="dashboard.php"><i class="bi bi-shield-lock-fill me-2"></i>MedConnect Admin</a>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="dashboard.php"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="medecin.php"><i class="bi bi-person-heart me-1"></i>Gestion Médecins</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="specialite.php"><i class="bi bi-journal-medical me-1"></i>Spécialités</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="utilisateurs.php"><i class="bi bi-people me-1"></i>Utilisateurs</a>
-                    </li>
-                </ul>
-                <ul class="navbar-nav align-items-center">
-                    <li class="nav-item">
-                        <span class="nav-link text-white-50 me-3">Admin: <?php echo htmlspecialchars($_SESSION['user_nom']); ?></span>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link btn btn-outline-danger btn-sm text-white px-3" href="../logout.php"><i class="bi bi-box-arrow-right me-1"></i>Déconnexion</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <?php include_once '../includes/navbar.php'; ?>
 
     <div class="container my-5">
         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -160,6 +132,6 @@ $utilisateurs = $pdo->query("SELECT * FROM utilisateurs ORDER BY date_creation D
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <?php include_once '../includes/footer.php'; ?>
 </body>
 </html>

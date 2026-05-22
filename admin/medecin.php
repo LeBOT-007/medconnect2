@@ -5,7 +5,6 @@
 session_start();
 require_once '../config/database.php';
 
-// Sécurité : Vérification des accès de l'administrateur
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
     header("Location: ../login.php");
     exit;
@@ -15,14 +14,11 @@ $pdo = getConnexion();
 $succes = "";
 $erreur = "";
 
-// Traitement des requêtes POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     
-    // Action : AJOUTER UN MÉDECIN
     if ($_POST['action'] === 'ajouter') {
         $email = trim($_POST['email']);
         
-        // Sécurité : Vérification de l'existence de l'adresse email
         $checkEmail = $pdo->prepare("SELECT id_utilisateur FROM utilisateurs WHERE email = ?");
         $checkEmail->execute([$email]);
         
@@ -31,12 +27,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         } else {
             $hash = password_hash($_POST['mot_de_passe'], PASSWORD_BCRYPT);
 
-            // Insertion dans la table utilisateurs
             $stmt = $pdo->prepare("INSERT INTO utilisateurs (nom, prenom, email, mot_de_passe, role) VALUES (?, ?, ?, ?, 'medecin')");
             $stmt->execute([trim($_POST['nom']), trim($_POST['prenom']), $email, $hash]);
             $id_utilisateur = $pdo->lastInsertId();
 
-            // Insertion dans la table medecin
             $stmt = $pdo->prepare("INSERT INTO medecin (id_utilisateur, id_specialite, numero_ordre, description) VALUES (?, ?, ?, ?)");
             $stmt->execute([$id_utilisateur, (int)$_POST['id_specialite'], trim($_POST['numero_ordre']), trim($_POST['description'])]);
 
@@ -44,7 +38,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
     }
 
-    // Action : SUPPRIMER UN MÉDECIN
     if ($_POST['action'] === 'supprimer') {
         $id_medecin = (int)$_POST['id_medecin'];
         
@@ -58,7 +51,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
-// Récupération de la liste des médecins actifs
 $medecins = $pdo->query("
     SELECT m.id_medecin, u.nom, u.prenom, u.email, s.nom_specialite, m.numero_ordre
     FROM medecin m
@@ -67,7 +59,6 @@ $medecins = $pdo->query("
     ORDER BY u.nom ASC
 ")->fetchAll();
 
-// Récupération des spécialités disponibles pour alimenter le menu déroulant
 $specialites = $pdo->query("SELECT * FROM specialite ORDER BY nom_specialite ASC")->fetchAll();
 ?>
 
@@ -82,29 +73,7 @@ $specialites = $pdo->query("SELECT * FROM specialite ORDER BY nom_specialite ASC
 </head>
 <body class="bg-light">
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
-        <div class="container">
-            <a class="navbar-brand fw-bold text-info" href="dashboard.php"><i class="bi bi-shield-lock-fill me-2"></i>MedConnect Admin</a>
-            <div class="collapse navbar-collapse">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="dashboard.php"><i class="bi bi-speedometer2 me-1"></i> Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="medecin.php"><i class="bi bi-person-heart me-1"></i> Gestion Médecins</a>
-                    </li>
-                </ul>
-                <ul class="navbar-nav align-items-center">
-                    <li class="nav-item">
-                        <span class="nav-link active me-3 text-white-50">Admin: <?php echo htmlspecialchars($_SESSION['user_nom']); ?></span>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link btn btn-outline-danger btn-sm text-white px-3" href="../logout.php"><i class="bi bi-box-arrow-right me-1"></i>Déconnexion</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <?php include_once '../includes/navbar.php'; ?>
 
     <div class="container my-5">
         
@@ -224,6 +193,6 @@ $specialites = $pdo->query("SELECT * FROM specialite ORDER BY nom_specialite ASC
 
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <?php include_once '../includes/footer.php'; ?>
 </body>
 </html>

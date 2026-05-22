@@ -37,32 +37,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $heure_rdv  = $_POST['heure_rdv'];
     $motif      = trim($_POST['motif']);
 
-    // Vérifications simples
     if (empty($id_medecin) || empty($date_rdv) || empty($heure_rdv)) {
         $erreur = "Veuillez remplir tous les champs obligatoires.";
-
-    } elseif ($date_rdv < date('Y-m-d')) {
-        $erreur = "La date choisie est déjà passée.";
-
     } else {
-        // Vérifier si ce créneau est déjà pris
-        $check = $pdo->prepare("
-            SELECT COUNT(*) FROM rendez_vous
-            WHERE id_medecin = ? AND date_rdv = ? AND heure_rdv = ?
-            AND statut != 'annule'
+        // Insertion de la demande de rendez-vous
+        $stmt = $pdo->prepare("
+            INSERT INTO rendez_vous (id_patient, id_medecin, date_rdv, heure_rdv, motif, statut)
+            VALUES (?, ?, ?, ?, ?, 'en_attente')
         ");
-        $check->execute([$id_medecin, $date_rdv, $heure_rdv]);
-
-        if ($check->fetchColumn() > 0) {
-            $erreur = "Ce créneau est déjà pris. Choisissez un autre horaire.";
+        if ($stmt->execute([$id_patient, $id_medecin, $date_rdv, $heure_rdv, $motif])) {
+            $_SESSION['message'] = "Votre demande de rendez-vous a bien été enregistrée.";
+            header("Location: dashboard.php");
+            exit;
         } else {
-            // Insérer le rendez-vous
-            $insert = $pdo->prepare("
-                INSERT INTO rendez_vous (id_patient, id_medecin, date_rdv, heure_rdv, motif, statut)
-                VALUES (?, ?, ?, ?, ?, 'en_attente')
-            ");
-            $insert->execute([$id_patient, $id_medecin, $date_rdv, $heure_rdv, $motif]);
-            $message = "Votre rendez-vous a bien été enregistré ! En attente de validation.";
+            $erreur = "Une erreur est survenue lors de l'enregistrement de votre rendez-vous.";
         }
     }
 }
@@ -72,220 +60,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prendre un RDV – MedConnect</title>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Nunito', sans-serif;
-            background: #f0f4ff;
-            color: #1e293b;
-            min-height: 100vh;
-        }
-
-        /* ── Navbar ── */
-        nav {
-            background: #1a6fc4;
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 10px rgba(26,111,196,.3);
-        }
-        nav .logo { color: #fff; font-size: 1.3rem; font-weight: 800; }
-        nav .logo span { color: #93c5fd; }
-        nav .nav-links { display: flex; gap: .8rem; }
-        nav a {
-            color: #fff;
-            text-decoration: none;
-            font-size: .9rem;
-            font-weight: 600;
-            background: rgba(255,255,255,.15);
-            padding: .4rem 1rem;
-            border-radius: 20px;
-            transition: background .2s;
-        }
-        nav a:hover { background: rgba(255,255,255,.3); }
-
-        /* ── Formulaire ── */
-        .container {
-            max-width: 580px;
-            margin: 2.5rem auto;
-            padding: 0 1rem;
-        }
-
-        h1 { font-size: 1.5rem; font-weight: 800; color: #1a6fc4; margin-bottom: 1.5rem; }
-
-        .card {
-            background: #fff;
-            border-radius: 16px;
-            padding: 2rem;
-            box-shadow: 0 4px 20px rgba(0,0,0,.08);
-            animation: fadeIn .35s ease;
-        }
-
-        .group { margin-bottom: 1.2rem; }
-        label {
-            display: block;
-            font-size: .85rem;
-            font-weight: 700;
-            color: #475569;
-            margin-bottom: .4rem;
-        }
-        input, select, textarea {
-            width: 100%;
-            padding: .7rem 1rem;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            font-family: 'Nunito', sans-serif;
-            font-size: .95rem;
-            color: #1e293b;
-            background: #f8fafc;
-            transition: border-color .2s;
-        }
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: #1a6fc4;
-            background: #fff;
-        }
-        textarea { resize: vertical; min-height: 90px; }
-
-        /* Date min = aujourd'hui via JS */
-
-        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-
-        /* ── Bouton ── */
-        button[type="submit"] {
-            width: 100%;
-            padding: .9rem;
-            background: #1a6fc4;
-            color: #fff;
-            border: none;
-            border-radius: 10px;
-            font-family: 'Nunito', sans-serif;
-            font-size: 1rem;
-            font-weight: 800;
-            cursor: pointer;
-            margin-top: .5rem;
-            transition: background .2s, transform .15s;
-        }
-        button[type="submit"]:hover { background: #155fa0; transform: translateY(-1px); }
-
-        /* ── Messages ── */
-        .alert {
-            border-radius: 10px;
-            padding: .9rem 1.2rem;
-            margin-bottom: 1.2rem;
-            font-weight: 700;
-            font-size: .92rem;
-        }
-        .alert-success { background: #dcfce7; color: #15803d; border-left: 4px solid #22c55e; }
-        .alert-error   { background: #fee2e2; color: #dc2626; border-left: 4px solid #ef4444; }
-
-        .back-link, .success-link,
-        .btn-return {
-            display: inline-flex;
-            align-items: center;
-            gap: .5rem;
-            margin-top: 1rem;
-            color: #fff;
-            font-weight: 700;
-            text-decoration: none;
-            font-size: .95rem;
-            background: #1a6fc4;
-            padding: .85rem 1.1rem;
-            border-radius: 12px;
-            border: none;
-            transition: background .2s, transform .15s;
-        }
-        .btn-return { color: #fff; }
-        .back-link { color: #1a6fc4; background: transparent; padding: 0; border-radius: 0; }
-        .back-link:hover,
-        .success-link:hover,
-        .btn-return:hover { text-decoration: none; background: #155fa0; transform: translateY(-1px); }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(16px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-    </style>
+    <title>MedConnect - Prendre un rendez-vous</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 </head>
-<body>
+<body class="bg-light">
 
-<!-- Navbar -->
-<nav>
-    <div class="logo">Med<span>Connect</span></div>
-    <div class="nav-links">
-        <a href="dashboard.php">Espace santé</a>
-        <a href="historique.php">Historique</a>
-        <a href="../logout.php">Déconnexion</a>
-    </div>
-</nav>
+    <?php include_once '../includes/navbar_patient.php'; ?>
 
-<div class="container">
-    <h1> Prendre un rendez-vous</h1>
-
-    <div class="card">
-
-        <!-- Messages de retour -->
-        <?php if ($message): ?>
-            <div class="alert alert-success"> <?= htmlspecialchars($message) ?></div>
-            <a href="dashboard.php" class="back-link success-link">← Retour à l'espace santé</a>
-        <?php endif; ?>
-        <?php if ($erreur): ?>
-            <div class="alert alert-error"><?= htmlspecialchars($erreur) ?></div>
-        <?php endif; ?>
-
-        <form method="POST" action="">
-
-            <!-- Choix du médecin -->
-            <div class="group">
-                <label for="id_medecin">Médecin *</label>
-                <select name="id_medecin" id="id_medecin" required>
-                    <option value="">-- Choisir un médecin --</option>
-                    <?php foreach ($medecins as $med): ?>
-                    <option value="<?= $med['id_medecin'] ?>"
-                        <?= (isset($_POST['id_medecin']) && $_POST['id_medecin'] == $med['id_medecin']) ? 'selected' : '' ?>>
-                        Dr <?= htmlspecialchars($med['prenom'] . ' ' . $med['nom']) ?>
-                        (<?= htmlspecialchars($med['specialite'] ?? 'Généraliste') ?>)
-                    </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <!-- Date et heure -->
-            <div class="row">
-                <div class="group">
-                    <label for="date_rdv"> Date *</label>
-                    <input type="date" name="date_rdv" id="date_rdv" required
-                           value="<?= htmlspecialchars($_POST['date_rdv'] ?? '') ?>">
+    <div class="container my-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                
+                <div class="mb-4">
+                    <a href="dashboard.php" class="text-decoration-none small fw-semibold"><i class="bi bi-arrow-left me-1"></i> Retour à mon espace</a>
+                    <h2 class="fw-bold text-dark mt-2">Prendre un rendez-vous</h2>
+                    <p class="text-muted">Remplissez le formulaire ci-dessous pour planifier votre consultation avec un praticien.</p>
                 </div>
-                <div class="group">
-                    <label for="heure_rdv"> Heure *</label>
-                    <input type="time" name="heure_rdv" id="heure_rdv" required
-                           min="08:00" max="18:00"
-                           value="<?= htmlspecialchars($_POST['heure_rdv'] ?? '') ?>">
+
+                <?php if (!empty($erreur)): ?>
+                    <div class="alert alert-danger shadow-sm" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> <?php echo $erreur; ?>
+                    </div>
+                <?php endif; ?>
+
+                <div class="card border-0 shadow-sm p-4">
+                    <form method=\"POST\" action=\"prendre_rdv.php\">
+                        
+                        <div class="mb-4">
+                            <label for="id_medecin" class="form-label fw-semibold">Choisir un médecin *</label>
+                            <select name="id_medecin" id="id_medecin" class="form-select form-select-lg" required>
+                                <option value="" selected disabled>-- Sélectionnez un praticien --</option>
+                                <?php foreach ($medecins as $medecin): ?>
+                                    <option value="<?php echo $medecin['id_medecin']; ?>" <?php echo (isset($_POST['id_medecin']) && $_POST['id_medecin'] == $medecin['id_medecin']) ? 'selected' : ''; ?>>
+                                        Dr. <?php echo htmlspecialchars($medecin['nom'] . ' ' . $medecin['prenom'] . ' (' . $medecin['specialite'] . ')'); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="date_rdv" class="form-label fw-semibold">Date souhaitée *</label>
+                                <input type="date" name="date_rdv" id="date_rdv" class="form-control form-control-lg" required
+                                       value="<?php echo htmlspecialchars($_POST['date_rdv'] ?? ''); ?>">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="heure_rdv" class="form-label fw-semibold">Heure souhaitée *</label>
+                                <input type="time" name="heure_rdv" id="heure_rdv" class="form-control form-control-lg" required
+                                       min="08:00" max="18:00"
+                                       value="<?php echo htmlspecialchars($_POST['heure_rdv'] ?? ''); ?>">
+                                <div class="form-text">Heures d'ouverture : 08:00 à 18:00.</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="motif" class="form-label fw-semibold">Motif de la consultation</label>
+                            <textarea name="motif" id="motif" rows="4" class="form-control" placeholder="Ex: Consultation de contrôle, symptômes grippaux, renouvellement d'ordonnance..."><?php echo htmlspecialchars($_POST['motif'] ?? ''); ?></textarea>
+                        </div>
+
+                        <div class="d-grid mt-2">
+                            <button type="submit" class="btn btn-primary btn-lg fw-semibold shadow-sm">
+                                <i class="bi bi-calendar-check me-2"></i>Envoyer la demande de rendez-vous
+                            </button>
+                        </div>
+                    </form>
                 </div>
+
             </div>
-
-            <!-- Motif -->
-            <div class="group">
-                <label for="motif"> Motif de la consultation</label>
-                <textarea name="motif" id="motif" placeholder="Ex: Douleur abdominale, contrôle annuel..."><?= htmlspecialchars($_POST['motif'] ?? '') ?></textarea>
-            </div>
-
-            <button type="submit">Envoyer la demande →</button>
-        </form>
-
-        <a href="dashboard.php" class="btn-return">← Retour à mon espace santé</a>
+        </div>
     </div>
-</div>
 
-<script>
-    // Empêcher de choisir une date passée
-    document.getElementById('date_rdv').min = new Date().toISOString().split('T')[0];
-</script>
-
+    <script>
+        // Sécurité front-end basique : interdire le choix de dates passées
+        document.getElementById('date_rdv').min = new Date().toISOString().split("T")[0];
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
