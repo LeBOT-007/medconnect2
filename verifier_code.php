@@ -1,7 +1,5 @@
 <?php
-// ============================================================
-// 1. LE BACKEND : Traitement et validation du code
-// ============================================================
+
 session_start();
 require_once 'config/database.php';
 

@@ -1,7 +1,5 @@
 <?php
-// ============================================================
-// 1. LE BACKEND : Traitement de l'authentification (Optimisé)
-// ============================================================
+
 session_start();
 require_once 'config/database.php';
 

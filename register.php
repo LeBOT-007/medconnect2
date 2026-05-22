@@ -1,7 +1,5 @@
 <?php
-// ============================================================
-// 1. LE BACKEND : Inscription sécurisée + Envoi du code SMTP
-// ============================================================
+
 session_start();
 require_once 'config/database.php';
 require_once 'config/mail.php'; // Inclusion de notre nouveau module mail

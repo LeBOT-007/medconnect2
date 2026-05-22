@@ -1,7 +1,5 @@
 <?php
-// ============================================================
-// 1. LE BACKEND : Logique métier d'ajout et suppression
-// ============================================================
+
 session_start();
 require_once '../config/database.php';
 
