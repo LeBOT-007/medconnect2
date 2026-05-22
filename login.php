@@ -36,50 +36,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Vérification de l'existence de l'utilisateur et du mot de passe haché
     if ($user && password_verify($mdp, $user['mot_de_passe'])) {
         
-        // Nettoyage des chaînes pour éviter les espaces liés au type ENUM de MySQL
+        // Nettoyage de la chaîne du rôle pour éviter les espaces invisibles
         $role_nettoye = trim($user['role']);
-
+        
+        // Initialisation des variables de session communes
         $_SESSION['user_id']     = $user['id_utilisateur'];
         $_SESSION['user_nom']    = $user['nom'];
         $_SESSION['user_prenom'] = $user['prenom'];
         $_SESSION['user_role']   = $role_nettoye;
 
-        // --- RÉCUPÉRATION DE L'ID PATIENT SI RÔLE PATIENT ---
-        if ($role_nettoye === 'patient') {
-            $stmtPatient = $pdo->prepare("SELECT id_patient FROM patients WHERE id_utilisateur = ?");
-            $stmtPatient->execute([$user['id_utilisateur']]);
-            $patientData = $stmtPatient->fetch(PDO::FETCH_ASSOC);
-            
-            if ($patientData) {
-                // On stocke le VRAI id_patient lié à la clé étrangère
-                $_SESSION['patient_id'] = $patientData['id_patient'];
-            } else {
-                $erreur = "Profil patient introuvable. Veuillez contacter l'administrateur.";
-                session_destroy();
-                unset($_SESSION);
-            }
+        // Redirection et initialisation spécifiques selon le rôle
+        switch ($role_nettoye) {
+            case 'admin':
+                header("Location: admin/dashboard.php");
+                exit;
+
+            case 'medecin':
+                // CRUCIAL : On va chercher l'id_medecin correspondant à cet utilisateur
+                $stmtMed = $pdo->prepare("SELECT id_medecin FROM medecin WHERE id_utilisateur = ?");
+                $stmtMed->execute([$user['id_utilisateur']]);
+                $medecin = $stmtMed->fetch(PDO::FETCH_ASSOC);
+
+                if ($medecin) {
+                    $_SESSION['medecin_id'] = $medecin['id_medecin'];
+                    header("Location: medecin/dashboard.php");
+                    exit;
+                } else {
+                    $erreur = "Erreur : Aucun profil médecin lié à ce compte utilisateur.";
+                }
+                break;
+
+            case 'patient':
+                // On va chercher l'id_patient correspondant à cet utilisateur
+                $stmtPat = $pdo->prepare("SELECT id_patient FROM patients WHERE id_utilisateur = ?");
+                $stmtPat->execute([$user['id_utilisateur']]);
+                $patient = $stmtPat->fetch(PDO::FETCH_ASSOC);
+
+                if ($patient) {
+                    $_SESSION['patient_id'] = $patient['id_patient'];
+                    header("Location: patient/dashboard.php");
+                    exit;
+                } else {
+                    $erreur = "Erreur : Aucun profil patient lié à ce compte.";
+                }
+                break;
+
+            default:
+                $erreur = "Rôle utilisateur non reconnu.";
+                break;
         }
 
-        if (empty($erreur)) {
-            // Redirection basée sur le rôle nettoyé
-            switch ($role_nettoye) {
-                case 'admin':
-                    header("Location: admin/dashboard.php");
-                    break;
-                case 'medecin':
-                    header("Location: medecin/dashboard.php");
-                    break;
-                case 'patient':
-                    header("Location: patient/dashboard.php");
-                    break;
-                default:
-                    header("Location: login.php");
-                    break;
-            }
-            exit;
-        }
     } else {
-        $erreur = "Email ou mot de passe incorrect.";
+        $erreur = "Identifiants incorrects. Veuillez réessayer.";
     }
 }
 ?>

@@ -39,6 +39,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user_prenom'] = $user['prenom'];
         $_SESSION['user_role']   = trim($user['role']);
 
+        // Récupérer le id_patient associé à cet id_utilisateur
+        $stmtPatient = $pdo->prepare("SELECT id_patient FROM patients WHERE id_utilisateur = ?");
+        $stmtPatient->execute([$id_user]);
+        $patient = $stmtPatient->fetch(PDO::FETCH_ASSOC);
+
+        if ($patient) {
+            $_SESSION['patient_id'] = $patient['id_patient']; // On stocke le VRAI id_patient requis par le dashboard
+        }
+
         // Suppression de la variable temporaire de validation
         unset($_SESSION['en_cours_validation']);
 
