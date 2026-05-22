@@ -183,15 +183,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .alert-success { background: #dcfce7; color: #15803d; border-left: 4px solid #22c55e; }
         .alert-error   { background: #fee2e2; color: #dc2626; border-left: 4px solid #ef4444; }
 
-        .back-link {
-            display: inline-block;
+        .back-link, .success-link,
+        .btn-return {
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
             margin-top: 1rem;
-            color: #1a6fc4;
+            color: #fff;
             font-weight: 700;
             text-decoration: none;
-            font-size: .9rem;
+            font-size: .95rem;
+            background: #1a6fc4;
+            padding: .85rem 1.1rem;
+            border-radius: 12px;
+            border: none;
+            transition: background .2s, transform .15s;
         }
-        .back-link:hover { text-decoration: underline; }
+        .btn-return { color: #fff; }
+        .back-link { color: #1a6fc4; background: transparent; padding: 0; border-radius: 0; }
+        .back-link:hover,
+        .success-link:hover,
+        .btn-return:hover { text-decoration: none; background: #155fa0; transform: translateY(-1px); }
 
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(16px); }
@@ -205,6 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <nav>
     <div class="logo">Med<span>Connect</span></div>
     <div class="nav-links">
+        <a href="dashboard.php">Espace santé</a>
         <a href="historique.php">Historique</a>
         <a href="../logout.php">Déconnexion</a>
     </div>
@@ -218,6 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <!-- Messages de retour -->
         <?php if ($message): ?>
             <div class="alert alert-success"> <?= htmlspecialchars($message) ?></div>
+            <a href="dashboard.php" class="back-link success-link">← Retour à l'espace santé</a>
         <?php endif; ?>
         <?php if ($erreur): ?>
             <div class="alert alert-error"><?= htmlspecialchars($erreur) ?></div>
@@ -264,7 +278,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button type="submit">Envoyer la demande →</button>
         </form>
 
-        <a href="historique.php" class="back-link">← Retour à mon historique</a>
+        <a href="dashboard.php" class="btn-return">← Retour à mon espace santé</a>
     </div>
 </div>
 
