@@ -3,7 +3,7 @@ session_start();
 require_once 'config/database.php';
 
 $pdo = getConnexion();
-$email_test = 'admin@medconnect.com';
+$email_test = 'admin2@medconnect.com';
 $mdp_test = 'admin123';
 
 echo "<h2>--- Diagnostic de Connexion Admin ---</h2>";

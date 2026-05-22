@@ -28,10 +28,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email']);
     $mdp   = $_POST['mot_de_passe'];
 
-    // Recherche de l'utilisateur par son email avec forçage du mode associatif
+    // Recherche de l'utilisateur par son email
     $stmt = $pdo->prepare("SELECT * FROM utilisateurs WHERE email = ?");
     $stmt->execute([$email]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC); // Sécurité : Assure la correspondance exacte des colonnes
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     // Vérification de l'existence de l'utilisateur et du mot de passe haché
     if ($user && password_verify($mdp, $user['mot_de_passe'])) {
@@ -44,22 +44,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user_prenom'] = $user['prenom'];
         $_SESSION['user_role']   = $role_nettoye;
 
-        // Redirection basée sur le rôle nettoyé
-        switch ($role_nettoye) {
-            case 'admin':
-                header("Location: admin/dashboard.php");
-                break;
-            case 'medecin':
-                header("Location: medecin/dashboard.php");
-                break;
-            case 'patient':
-                header("Location: patient/dashboard.php");
-                break;
-            default:
-                header("Location: login.php");
-                break;
+        // --- RÉCUPÉRATION DE L'ID PATIENT SI RÔLE PATIENT ---
+        if ($role_nettoye === 'patient') {
+            $stmtPatient = $pdo->prepare("SELECT id_patient FROM patients WHERE id_utilisateur = ?");
+            $stmtPatient->execute([$user['id_utilisateur']]);
+            $patientData = $stmtPatient->fetch(PDO::FETCH_ASSOC);
+            
+            if ($patientData) {
+                // On stocke le VRAI id_patient lié à la clé étrangère
+                $_SESSION['patient_id'] = $patientData['id_patient'];
+            } else {
+                $erreur = "Profil patient introuvable. Veuillez contacter l'administrateur.";
+                session_destroy();
+                unset($_SESSION);
+            }
         }
-        exit;
+
+        if (empty($erreur)) {
+            // Redirection basée sur le rôle nettoyé
+            switch ($role_nettoye) {
+                case 'admin':
+                    header("Location: admin/dashboard.php");
+                    break;
+                case 'medecin':
+                    header("Location: medecin/dashboard.php");
+                    break;
+                case 'patient':
+                    header("Location: patient/dashboard.php");
+                    break;
+                default:
+                    header("Location: login.php");
+                    break;
+            }
+            exit;
+        }
     } else {
         $erreur = "Email ou mot de passe incorrect.";
     }
