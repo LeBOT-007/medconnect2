@@ -5,7 +5,7 @@
             <ul class="navbar-nav me-auto">
                 <li class="nav-item">
                     <a class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'dashboard.php') ? 'active' : ''; ?>" href="dashboard.php">
-                        <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                        <i class="bi bi-speedometer2 me-1"></i>Tableau de bord
                     </a>
                 </li>
                 <li class="nav-item">
@@ -20,7 +20,7 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'utilisateurs.php') ? 'active' : ''; ?>" href="utilisateurs.php">
-                        <i class="bi bi-people me-1"></i>Utilisateurs
+                        <i class="bi bi-people me-1"></i>Gestion des Utilisateurs
                     </a>
                 </li>
             </ul>
